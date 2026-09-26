@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp"]
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": ["mcp-server-fetch"]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/mcp@latest"],
+      "disabled": true
+    },
+    "logleak": {
+      "command": "python",
+      "args": ["-m", "logleak.mcp_server"],
+      "alwaysAllow": ["scan_logs", "list_leaks", "get_leak_context", "verify_fix"]
+    }
+  }
+}

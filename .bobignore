@@ -1,0 +1,16 @@
+# Secrets (Bob must never read these)
+.env
+.env.*
+secrets/
+*.key
+config/credentials.json
+
+# Raw captured logs: unmasked canary data stays out of Bob's context
+runs/**/*.jsonl
+
+# Noise Bob doesn't need
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/

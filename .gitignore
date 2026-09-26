@@ -1,0 +1,28 @@
+
+# Secrets (never commit)
+.env
+.env.*
+secrets/
+*.key
+config/credentials.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Virtual environments
+.venv/
+venv/
+
+# LogLeak run output (raw captures, workspace copies, reports)
+runs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
