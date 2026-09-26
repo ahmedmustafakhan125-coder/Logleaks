@@ -209,6 +209,30 @@ def cmd_verify(target_str: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# serve command
+# ---------------------------------------------------------------------------
+
+
+def cmd_serve(host: str, port: int) -> None:
+    """Start the FastAPI dashboard server."""
+    try:
+        import uvicorn
+    except ImportError:
+        print("Error: uvicorn is not installed. Run: pip install uvicorn", file=sys.stderr)
+        sys.exit(1)
+
+    from logleak.server import app  # noqa: F401 — imported for side-effects
+
+    print(f"\n[serve] Dashboard at http://{host}:{port}/ui/\n")
+    uvicorn.run(
+        "logleak.server:app",
+        host=host,
+        port=port,
+        reload=False,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 
@@ -235,7 +259,9 @@ def main() -> None:
     p_verify = subparsers.add_parser("verify", help="Run the 6-check verification gate.")
     p_verify.add_argument("target", help="Path to the workspace to verify.")
 
-    subparsers.add_parser("serve", help="Start the dashboard API server.")
+    p_serve = subparsers.add_parser("serve", help="Start the dashboard API server.")
+    p_serve.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
+    p_serve.add_argument("--port", type=int, default=8765, help="Bind port (default: 8765)")
 
     args = parser.parse_args()
 
@@ -245,5 +271,7 @@ def main() -> None:
         cmd_fix(args.target, prepare_only=args.prepare_only)
     elif args.command == "verify":
         cmd_verify(args.target)
+    elif args.command == "serve":
+        cmd_serve(args.host, args.port)
     else:
         parser.print_help()

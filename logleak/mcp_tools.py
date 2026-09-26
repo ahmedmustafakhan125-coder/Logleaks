@@ -210,6 +210,9 @@ def verify_fix(target: str) -> dict:
         probe_masked=probe_safety_net(target_path),
     )
 
+    # Persist after-report so the dashboard can show the clean log stream
+    (_RUNS_DIR / "report_after.json").write_text(after.to_json(), encoding="utf-8")
+
     # Persist gate result
     gate_data = result.to_dict()
     (_RUNS_DIR / "gate.json").write_text(

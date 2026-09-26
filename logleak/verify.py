@@ -71,8 +71,19 @@ def run_gate(
             reasons.append(f"Allowlisted token '{token}' missing from after-logs (over-redacted?)")
 
     # G5: Log sites retained at >= min_site_retention
-    before_count = len(before.executed_sites)
-    after_count = len(after.executed_sites)
+    # Only count app-owned sites (exclude third-party / stdlib paths) so that
+    # raising a library's log level (a legitimate PII fix) doesn't penalise
+    # the retention score.
+    _is_third_party = lambda p: (  # noqa: E731
+        "site-packages" in str(p)
+        or "dist-packages" in str(p)
+        or "\\Lib\\" in str(p)
+        or "/lib/python" in str(p)
+    )
+    before_app = {s for s in before.executed_sites if not _is_third_party(s[0])}
+    after_app  = {s for s in after.executed_sites  if not _is_third_party(s[0])}
+    before_count = len(before_app)
+    after_count  = len(after_app)
     if before_count == 0:
         g5 = (after_count == 0)
     else:
