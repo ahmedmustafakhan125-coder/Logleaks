@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 # Repo root used by scan to write into runs/
@@ -209,6 +210,182 @@ def cmd_verify(target_str: str) -> None:
 
 
 # ---------------------------------------------------------------------------
+# watch command
+# ---------------------------------------------------------------------------
+
+# ANSI colour codes (no external deps)
+_RESET  = "\033[0m"
+_BOLD   = "\033[1m"
+_RED    = "\033[31m"
+_YELLOW = "\033[33m"
+_CYAN   = "\033[36m"
+_GREEN  = "\033[32m"
+
+_SEV_COLOUR = {"critical": _RED, "high": _YELLOW}
+
+
+def _alert(line: str, findings) -> None:
+    """Print a breach alert to stderr with ANSI colours."""
+    from logleak.detectors import SEVERITY
+    from logleak.redact import mask
+
+    for f in findings:
+        sev   = SEVERITY.get(f.kind, "high")
+        conf  = f.confidence          # confirmed | suspected
+        col   = _SEV_COLOUR.get(sev, _YELLOW)
+        masked = mask(f.kind, f.value)
+        print(
+            f"{col}{_BOLD}[BREACH]{_RESET} "
+            f"{col}{sev.upper()}{_RESET} "
+            f"{_CYAN}{f.kind}{_RESET} "
+            f"({conf}) — "
+            f"{masked}",
+            file=sys.stderr,
+        )
+    # Print the (already-safe) masked log line so the user can see context
+    from logleak.redact import redact_text
+    print(f"  {_BOLD}line:{_RESET} {redact_text(line.rstrip())}", file=sys.stderr)
+    print(file=sys.stderr)
+
+
+def _build_smtp_config(args) -> "object | None":
+    """Build a SmtpConfig from parsed CLI args, or return None if unconfigured."""
+    if not getattr(args, "smtp_host", None):
+        return None
+    if not args.smtp_to:
+        print(
+            "Error: --smtp-host requires --smtp-to (recipient address).",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    from logleak.notifier import SmtpConfig
+    return SmtpConfig(
+        host=args.smtp_host,
+        port=args.smtp_port,
+        use_tls=not args.smtp_no_tls,
+        username=args.smtp_user or "",
+        password=args.smtp_password or "",
+        from_addr=args.smtp_from or args.smtp_user or "",
+        to_addrs=args.smtp_to,
+    )
+
+
+def _make_email_breach_callback(smtp_cfg, app_name: str, cooldown: float):
+    """Return an EmailNotifier configured from smtp_cfg."""
+    from logleak.notifier import EmailNotifier
+    return EmailNotifier(smtp_cfg, app_name=app_name, cooldown=cooldown)
+
+
+def cmd_watch(
+    log_path: str,
+    canaries_only: bool,
+    poll: float,
+    smtp_cfg=None,
+    app_name: str = "LogLeak",
+    email_cooldown: float = 300.0,
+) -> None:
+    """Tail a log file (or stdin) and alert immediately on any PII breach."""
+    from logleak.detectors import detect
+    from logleak.canaries import all_canaries
+
+    canaries = all_canaries()
+
+    # Build optional email notifier
+    email_notifier = None
+    if smtp_cfg is not None:
+        email_notifier = _make_email_breach_callback(smtp_cfg, app_name, email_cooldown)
+
+    # ------------------------------------------------------------------
+    # Open the source: '-' → stdin, otherwise tail the given file.
+    # ------------------------------------------------------------------
+    reading_stdin = log_path == "-"
+
+    if not reading_stdin:
+        p = Path(log_path)
+        if not p.exists():
+            print(f"Error: log file does not exist: {p}", file=sys.stderr)
+            sys.exit(1)
+
+    print(
+        f"\n{_BOLD}[watch]{_RESET} LogLeak watching "
+        f"{_CYAN}{'stdin' if reading_stdin else log_path}{_RESET} ...",
+        file=sys.stderr,
+    )
+    if canaries_only:
+        print(
+            f"  Mode: {_YELLOW}canaries-only{_RESET} "
+            "(only confirmed canary matches are reported)",
+            file=sys.stderr,
+        )
+    if email_notifier is not None:
+        print(
+            f"  Email alerts → {_CYAN}{', '.join(smtp_cfg.to_addrs)}{_RESET}",
+            file=sys.stderr,
+        )
+    print(f"  Press Ctrl-C to stop.\n", file=sys.stderr)
+
+    breach_count = 0
+
+    def _handle_findings(raw_line: str, findings) -> None:
+        nonlocal breach_count
+        breach_count += 1
+        _alert(raw_line, findings)
+        if email_notifier is not None:
+            # Build a lightweight BreachEvent-like object for each finding
+            from logleak.watch_handler import BreachEvent
+            from logleak.detectors import SEVERITY
+            from logleak.redact import redact_text, mask
+            masked_line = redact_text(raw_line.rstrip())
+            for f in findings:
+                event = BreachEvent(
+                    kind=f.kind,
+                    severity=SEVERITY.get(f.kind, "high"),
+                    confidence=f.confidence,
+                    masked_value=mask(f.kind, f.value),
+                    logger_name="",
+                    level="",
+                    masked_line=masked_line,
+                    pathname=log_path,
+                    lineno=0,
+                )
+                email_notifier(event)
+
+    try:
+        if reading_stdin:
+            for raw_line in sys.stdin:
+                findings = detect(raw_line, canaries=canaries)
+                if canaries_only:
+                    findings = [f for f in findings if f.confidence == "confirmed"]
+                if findings:
+                    _handle_findings(raw_line, findings)
+        else:
+            with open(log_path, "r", encoding="utf-8", errors="replace") as fh:
+                # Seek to end so we only watch new lines
+                fh.seek(0, 2)
+                while True:
+                    raw_line = fh.readline()
+                    if raw_line:
+                        findings = detect(raw_line, canaries=canaries)
+                        if canaries_only:
+                            findings = [f for f in findings if f.confidence == "confirmed"]
+                        if findings:
+                            _handle_findings(raw_line, findings)
+                    else:
+                        time.sleep(poll)
+
+    except KeyboardInterrupt:
+        pass
+
+    colour = _RED if breach_count else _GREEN
+    print(
+        f"\n{colour}{_BOLD}[watch] stopped — "
+        f"{breach_count} breach(es) detected.{_RESET}\n",
+        file=sys.stderr,
+    )
+    sys.exit(1 if breach_count else 0)
+
+
+# ---------------------------------------------------------------------------
 # serve command
 # ---------------------------------------------------------------------------
 
@@ -263,6 +440,106 @@ def main() -> None:
     p_serve.add_argument("--host", default="127.0.0.1", help="Bind host (default: 127.0.0.1)")
     p_serve.add_argument("--port", type=int, default=8765, help="Bind port (default: 8765)")
 
+    p_watch = subparsers.add_parser(
+        "watch",
+        help="Tail a log file (or stdin) and alert immediately on any PII breach.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        description=(
+            "Watch a log file (or stdin) for PII in real time.\n"
+            "Prints a coloured alert on every breach, and optionally\n"
+            "sends an HTML email alert (like a deployment failure email).\n\n"
+            "Example — file tail with email:\n"
+            "  logleak watch /var/log/app.log \\\n"
+            "    --smtp-host smtp.gmail.com --smtp-user alerts@example.com \\\n"
+            "    --smtp-password secret --smtp-to oncall@example.com\n\n"
+            "Example — pipe stdin with email:\n"
+            "  uvicorn myapp:app 2>&1 | logleak watch - \\\n"
+            "    --smtp-host smtp.gmail.com --smtp-to security@example.com"
+        ),
+    )
+    p_watch.add_argument(
+        "log",
+        help="Path to the log file to watch, or '-' to read from stdin.",
+    )
+    p_watch.add_argument(
+        "--canaries-only",
+        action="store_true",
+        help="Only report confirmed canary matches (suppress suspected findings).",
+    )
+    p_watch.add_argument(
+        "--poll",
+        type=float,
+        default=0.2,
+        metavar="SECONDS",
+        help="Polling interval when tailing a file (default: 0.2 s).",
+    )
+
+    # --- SMTP / email alert options ---
+    smtp_grp = p_watch.add_argument_group(
+        "email alerts",
+        "Send an HTML breach-alert email (like a deployment failure notification).\n"
+        "--smtp-host is required to enable email; --smtp-to is also required.",
+    )
+    smtp_grp.add_argument(
+        "--smtp-host",
+        metavar="HOST",
+        default=None,
+        help="SMTP server hostname (e.g. smtp.gmail.com).",
+    )
+    smtp_grp.add_argument(
+        "--smtp-port",
+        type=int,
+        default=587,
+        metavar="PORT",
+        help="SMTP port (default: 587).",
+    )
+    smtp_grp.add_argument(
+        "--smtp-no-tls",
+        action="store_true",
+        help="Disable STARTTLS (not recommended).",
+    )
+    smtp_grp.add_argument(
+        "--smtp-user",
+        metavar="USER",
+        default=None,
+        help="SMTP login username / sending address.",
+    )
+    smtp_grp.add_argument(
+        "--smtp-password",
+        metavar="PASS",
+        default=None,
+        help="SMTP login password or app password.",
+    )
+    smtp_grp.add_argument(
+        "--smtp-from",
+        metavar="ADDR",
+        default=None,
+        help="From address (defaults to --smtp-user when omitted).",
+    )
+    smtp_grp.add_argument(
+        "--smtp-to",
+        metavar="ADDR",
+        action="append",
+        default=[],
+        help="Recipient address. Repeat for multiple recipients.",
+    )
+    smtp_grp.add_argument(
+        "--smtp-app-name",
+        metavar="NAME",
+        default="LogLeak",
+        help="App name shown in the email subject (default: LogLeak).",
+    )
+    smtp_grp.add_argument(
+        "--smtp-cooldown",
+        type=float,
+        default=300.0,
+        metavar="SECONDS",
+        help=(
+            "Minimum seconds between emails for the same source location "
+            "(default: 300). Prevents inbox floods."
+        ),
+    )
+
     args = parser.parse_args()
 
     if args.command == "scan":
@@ -273,5 +550,15 @@ def main() -> None:
         cmd_verify(args.target)
     elif args.command == "serve":
         cmd_serve(args.host, args.port)
+    elif args.command == "watch":
+        smtp_cfg = _build_smtp_config(args)
+        cmd_watch(
+            args.log,
+            canaries_only=args.canaries_only,
+            poll=args.poll,
+            smtp_cfg=smtp_cfg,
+            app_name=args.smtp_app_name,
+            email_cooldown=args.smtp_cooldown,
+        )
     else:
         parser.print_help()
