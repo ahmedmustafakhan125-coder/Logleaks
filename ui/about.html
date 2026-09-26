@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>About LogLeak</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ── Header ── -->
+<header>
+  <a class="logo" href="index.html"><span class="lock-icon">🔒</span>LogLeak</a>
+  <nav class="nav">
+    <a href="index.html">Dashboard</a>
+    <a href="about.html" class="active">About</a>
+  </nav>
+  <span class="target"></span>
+</header>
+
+<div class="page-content">
+
+  <!-- ── Hero ── -->
+  <section class="about-hero">
+    <h1>LOG<br>LEAK</h1>
+    <p class="tagline">Your logs are shipping your customers' data.</p>
+    <p class="intro">
+      LogLeak proves it, has IBM Bob fix it, then proves the fix. It runs your app's own
+      tests, watches every log line, <code>print()</code> and traceback, and traces each
+      leaked email, phone number, card, CNIC, IBAN or token to the exact <code>file:line</code>
+      that wrote it.
+    </p>
+  </section>
+
+  <!-- ── What it is ── -->
+  <section class="about-section">
+    <div class="section-label">How it works</div>
+    <div class="card-grid">
+      <div class="info-card">
+        <span class="step">1 · SEED</span>
+        <h3>Canary PII</h3>
+        <p>Fake but valid data (a Luhn-valid card, a <code>.test</code> email) is injected into the tests, so any match in a log is a confirmed leak, not a guess.</p>
+      </div>
+      <div class="info-card">
+        <span class="step">2 · CAPTURE</span>
+        <h3>Runtime, not static</h3>
+        <p>A pytest plugin hooks logging and stdout, catching leaks through <code>__repr__</code>, f-strings, tracebacks and third-party libraries that grep can't see.</p>
+      </div>
+      <div class="info-card">
+        <span class="step">3 · FIX</span>
+        <h3>IBM Bob repairs it</h3>
+        <p>Bob gets a masked report and fixes each leak at its source. Bob never sees raw PII, so the fixer never becomes a new leak.</p>
+      </div>
+      <div class="info-card">
+        <span class="step">4 · VERIFY</span>
+        <h3>Anti-cheat gate</h3>
+        <p>The same flows run again. The gate passes only with zero leaks, passing tests, and logs that still keep their useful IDs, so deleting logs doesn't count as a fix.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Creators ── -->
+  <section class="about-section">
+    <div class="section-label">Meet the creators</div>
+    <div class="creators-grid">
+
+      <article class="creator-card">
+        <div class="banner"></div>
+        <div class="avatar">AM</div>
+        <div class="body">
+          <h3>Ahmed Mustafa</h3>
+          <div class="role">Creator</div>
+          <p class="bio">Built LogLeak's detection engine, Bob fixer workflow and this dashboard.</p>
+          <div class="links">
+            <a class="pill-link" href="https://github.com/ahmedmustafakhan125-coder" target="_blank" rel="noopener">GitHub</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="creator-card">
+        <div class="banner"></div>
+        <div class="avatar">AN</div>
+        <div class="body">
+          <h3>alinoor4</h3>
+          <div class="role">Creator</div>
+          <p class="bio">Co-creator of LogLeak.</p>
+          <div class="links"></div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <div class="about-footer">Built with Python, FastAPI and IBM Bob</div>
+
+</div>
+</body>
+</html>
