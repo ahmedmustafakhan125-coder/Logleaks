@@ -122,18 +122,17 @@ function renderLeakTable(leaks) {
   });
 
   leakTbody.innerHTML = sorted.map(lk => {
-    const sevCls  = `sev-${lk.severity}`;
-    const fixCls  = `status-${lk.fix_status || 'open'}`;
-    const fixLbl  = (lk.fix_status || 'open').charAt(0).toUpperCase() + (lk.fix_status || 'open').slice(1);
-    const sel     = lk.fingerprint === _selectedFp ? ' class="selected"' : '';
+    const fixStatus = lk.fix_status || 'open';
+    const fixLbl    = fixStatus.charAt(0).toUpperCase() + fixStatus.slice(1);
+    const sel       = lk.fingerprint === _selectedFp ? ' class="selected"' : '';
     return `<tr${sel} data-fp="${escapeHtml(lk.fingerprint)}">
-      <td class="${sevCls}">${escapeHtml(lk.severity)}</td>
-      <td>${escapeHtml(lk.kind)}</td>
+      <td><span class="sev-chip ${escapeHtml(lk.severity)}">${escapeHtml(lk.severity)}</span></td>
+      <td><span class="kind-chip">${escapeHtml(lk.kind)}</span></td>
       <td class="file-cell">${escapeHtml(lk.file)}:${lk.line}</td>
-      <td>${escapeHtml(lk.sink)}</td>
-      <td>${lk.hits}</td>
-      <td class="${fixCls}">${fixLbl}</td>
-      <td class="file-cell" style="max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(lk.sample || '')}</td>
+      <td class="sink-cell">${escapeHtml(lk.sink)}</td>
+      <td style="color:var(--muted);font-size:13px;">${lk.hits}</td>
+      <td><span class="status-chip ${escapeHtml(fixStatus)}">${fixLbl}</span></td>
+      <td class="sample-cell">${escapeHtml(lk.sample || '')}</td>
     </tr>`;
   }).join('');
 
@@ -203,15 +202,18 @@ function renderGate(gate) {
   }
   let delay = 0;
   gateList.innerHTML = Object.entries(GATE_LABELS).map(([key, label]) => {
-    const pass = gate.checks && gate.checks[key];
-    const icon = pass ? '✓' : '✗';
-    const cls  = pass ? 'gate-pass' : 'gate-fail';
+    const pass   = gate.checks && gate.checks[key];
+    const icon   = pass ? '✓' : '✗';
+    const cls    = pass ? 'gate-pass' : 'gate-fail';
+    const reason = !pass && gate.reasons
+      ? (gate.reasons.find(r => r.toLowerCase().includes(key.replace(/_/g, ' '))) || '')
+      : '';
     delay += 120;
     return `<li style="animation-delay:${delay}ms">
       <span class="gate-icon ${cls}">${icon}</span>
-      <span>
+      <span class="gate-label">
         ${escapeHtml(label)}
-        ${!pass && gate.reasons ? `<span class="gate-reason">${escapeHtml(gate.reasons.find(r => r.toLowerCase().includes(key.replace(/_/g,' '))) || '')}</span>` : ''}
+        ${reason ? `<span class="gate-reason">${escapeHtml(reason)}</span>` : ''}
       </span>
     </li>`;
   }).join('');

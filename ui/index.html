@@ -10,7 +10,7 @@
 
 <!-- ── Header ── -->
 <header>
-  <span class="logo">LogLeak 🔒</span>
+  <span class="logo"><span class="lock-icon">🔒</span>LogLeak</span>
   <span class="target" id="target-label">demo/caredesk</span>
   <div class="hdr-actions">
     <button class="btn" id="btn-scan">Scan</button>
@@ -19,79 +19,83 @@
   </div>
 </header>
 
-<!-- ── Headline ── -->
-<div class="headline">
-  <h1 id="headline">Loading…</h1>
-  <p class="sub" id="subline"></p>
-</div>
+<div class="page-content">
 
-<!-- ── Main grid: two log streams ── -->
-<div class="main-grid">
+  <!-- ── Headline ── -->
+  <div class="headline">
+    <h1 id="headline">Loading…</h1>
+    <p class="sub" id="subline"></p>
+  </div>
 
-  <!-- Before stream -->
-  <div class="panel">
-    <div class="panel-title">Before — raw log output</div>
-    <div class="log-stream" id="before-stream">
-      <span class="log-empty">No scan yet.</span>
+  <!-- ── Main grid: two log streams + leak table ── -->
+  <div class="main-grid">
+
+    <!-- Before stream -->
+    <div class="panel">
+      <div class="panel-title">Before <span class="panel-badge">raw</span></div>
+      <div class="log-stream" id="before-stream">
+        <span class="log-empty">No scan yet.</span>
+      </div>
     </div>
-  </div>
 
-  <!-- After stream -->
-  <div class="panel">
-    <div class="panel-title">After — redacted log output</div>
-    <div class="log-stream" id="after-stream">
-      <span class="log-empty">Run Bob fix to see the after state.</span>
+    <!-- After stream -->
+    <div class="panel">
+      <div class="panel-title">After <span class="panel-badge">redacted</span></div>
+      <div class="log-stream" id="after-stream">
+        <span class="log-empty">Run Fix with Bob to see the after state.</span>
+      </div>
     </div>
+
+    <!-- Leak table (full width) -->
+    <div class="panel full-width">
+      <div class="panel-title">Leaks</div>
+      <table class="leak-table">
+        <thead>
+          <tr>
+            <th data-sort="severity">Severity</th>
+            <th data-sort="kind">Type</th>
+            <th data-sort="file">Where</th>
+            <th data-sort="sink">Sink</th>
+            <th data-sort="hits">Hits</th>
+            <th data-sort="fix_status">Status</th>
+            <th>Sample</th>
+          </tr>
+        </thead>
+        <tbody id="leak-tbody">
+          <tr><td colspan="7" style="text-align:center;color:var(--muted-light);padding:24px;font-size:13px;">Scan to see leaks.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /main-grid -->
+
+  <!-- ── Bottom row: gate + diff ── -->
+  <div class="bottom-grid">
+
+    <!-- Gate panel -->
+    <div class="panel">
+      <div class="panel-title">Verification gate</div>
+      <ul class="gate-list" id="gate-list">
+        <li style="color:var(--muted-light);font-style:italic;padding:14px 16px;border-bottom:none;">No verification run yet.</li>
+      </ul>
+      <div class="gate-overall" id="gate-overall"></div>
+    </div>
+
+    <!-- Selected leak / diff panel -->
+    <div class="panel diff-panel">
+      <div class="panel-title">Selected leak — source context</div>
+      <pre id="diff-pre"><span class="no-select">Click a leak row to see its source context.</span></pre>
+    </div>
+
+  </div><!-- /bottom-grid -->
+
+  <!-- ── Unwitnessed ── -->
+  <div class="unwitnessed-section">
+    <div class="unwitnessed-toggle" id="unwitnessed-txt"></div>
+    <div id="unwitnessed-list"></div>
   </div>
 
-  <!-- Leak table (full width) -->
-  <div class="panel full-width">
-    <div class="panel-title">Leaks</div>
-    <table class="leak-table">
-      <thead>
-        <tr>
-          <th data-sort="severity">Severity</th>
-          <th data-sort="kind">Type</th>
-          <th data-sort="file">Where</th>
-          <th data-sort="sink">Sink</th>
-          <th data-sort="hits">Hits</th>
-          <th data-sort="fix_status">Status</th>
-          <th>Sample</th>
-        </tr>
-      </thead>
-      <tbody id="leak-tbody">
-        <tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px">Scan to see leaks.</td></tr>
-      </tbody>
-    </table>
-  </div>
-
-</div><!-- /main-grid -->
-
-<!-- ── Bottom row: gate + diff ── -->
-<div class="bottom-grid">
-
-  <!-- Gate panel -->
-  <div class="panel">
-    <div class="panel-title">Verification gate</div>
-    <ul class="gate-list" id="gate-list">
-      <li style="color:var(--muted);font-style:italic">No verification run yet.</li>
-    </ul>
-    <div class="gate-overall" id="gate-overall"></div>
-  </div>
-
-  <!-- Selected leak / diff panel -->
-  <div class="panel diff-panel">
-    <div class="panel-title">Selected leak — source context</div>
-    <pre id="diff-pre"><span class="no-select">Click a leak row to see its source context.</span></pre>
-  </div>
-
-</div><!-- /bottom-grid -->
-
-<!-- ── Unwitnessed ── -->
-<div class="unwitnessed-toggle" id="unwitnessed-txt">
-  <!-- populated by JS -->
-</div>
-<div id="unwitnessed-list"></div>
+</div><!-- /page-content -->
 
 <!-- ── Status bar ── -->
 <div id="status-bar"></div>
