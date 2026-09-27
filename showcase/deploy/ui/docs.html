@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Documentation - LogLeak Showcase</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+<!-- Tailwind Typography Plugin -->
+<script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        fontFamily: {
+          sans: ['Inter', 'sans-serif'],
+          mono: ['Fira Code', 'monospace'],
+        },
+        colors: {
+          glass: {
+            DEFAULT: 'rgba(255, 255, 255, 0.05)',
+            border: 'rgba(255, 255, 255, 0.1)',
+            hover: 'rgba(255, 255, 255, 0.1)',
+          }
+        },
+        typography: {
+          DEFAULT: {
+            css: {
+              color: '#d4d4d8',
+              h1: { color: '#f4f4f5' },
+              h2: { color: '#f4f4f5' },
+              h3: { color: '#f4f4f5' },
+              h4: { color: '#f4f4f5' },
+              strong: { color: '#f4f4f5' },
+              a: { color: '#818cf8', '&:hover': { color: '#a5b4fc' } },
+              code: { color: '#a78bfa', backgroundColor: 'rgba(0,0,0,0.3)', padding: '2px 4px', borderRadius: '4px' },
+              'code::before': { content: '""' },
+              'code::after': { content: '""' },
+              pre: { backgroundColor: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)' },
+              blockquote: { color: '#a1a1aa', borderLeftColor: '#4f46e5' },
+              th: { color: '#f4f4f5' }
+            }
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  body {
+    background: linear-gradient(135deg, #09090b 0%, #171721 100%);
+    color: #f4f4f5;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+  
+  .glass-panel {
+    background: rgba(25, 25, 35, 0.4);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+  
+  .glass-header {
+    background: rgba(15, 15, 20, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.3); }
+</style>
+</head>
+<body class="flex flex-col h-screen">
+
+<!-- Header -->
+<header class="glass-header flex items-center justify-between px-6 py-4 z-10 shrink-0 sticky top-0">
+  <div class="flex items-center gap-4">
+    <h1 class="text-xl font-semibold tracking-tight"><span class="text-indigo-400">Log</span>Leak Documentation</h1>
+  </div>
+  <div class="flex items-center gap-6">
+    <nav class="flex gap-4">
+      <a href="/" class="text-zinc-400 font-medium hover:text-indigo-400 transition-colors">Showcase</a>
+      <a href="/docs" class="text-zinc-100 font-medium hover:text-indigo-400 transition-colors">Documentation</a>
+    </nav>
+  </div>
+</header>
+
+<!-- Main Area -->
+<div class="flex-1 overflow-y-auto p-4 md:p-8 flex justify-center">
+  <div class="glass-panel rounded-2xl p-8 max-w-4xl w-full">
+    <div id="loading" class="text-center py-10">
+      <div class="inline-block animate-spin w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full mb-4"></div>
+      <p class="text-zinc-400 animate-pulse">Loading documentation...</p>
+    </div>
+    
+    <!-- Rendered Markdown will go here -->
+    <article id="content" class="prose prose-invert prose-indigo max-w-none hidden"></article>
+  </div>
+</div>
+
+<script>
+  async function loadDocs() {
+    try {
+      const response = await fetch('/api/docs/content');
+      const data = await response.json();
+      
+      const contentEl = document.getElementById('content');
+      const loadingEl = document.getElementById('loading');
+      
+      // Parse markdown to HTML
+      contentEl.innerHTML = marked.parse(data.content);
+      
+      // Show content, hide loader
+      loadingEl.classList.add('hidden');
+      contentEl.classList.remove('hidden');
+    } catch (error) {
+      console.error('Error loading docs:', error);
+      document.getElementById('loading').innerHTML = `
+        <div class="text-red-400">
+          <svg class="w-12 h-12 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+          <p>Failed to load documentation.</p>
+        </div>
+      `;
+    }
+  }
+
+  // Initial load
+  loadDocs();
+</script>
+</body>
+</html>

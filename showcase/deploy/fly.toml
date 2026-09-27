@@ -1,0 +1,27 @@
+# fly.toml — LogLeak showcase
+# Generated for fly.io deployment.
+# Run `fly launch --copy-config` from the repo root to create the app,
+# or `fly deploy` if you already ran launch once.
+
+app = "logleaks-showcase"   # change this to your chosen app name
+primary_region = "iad"      # Washington DC — nearest Fly free-tier region
+
+[build]
+  dockerfile = "showcase/deploy/Dockerfile"
+  # The build context is the repo root so COPY can reach showcase/ and logleak/
+
+[http_service]
+  internal_port       = 8080
+  force_https         = true
+  auto_stop_machines  = true
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type       = "requests"
+    soft_limit = 50
+    hard_limit = 100
+
+[[vm]]
+  size   = "shared-cpu-1x"
+  memory = "256mb"
