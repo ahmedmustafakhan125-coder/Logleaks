@@ -26,3 +26,6 @@ runs/
 Thumbs.db
 .vscode/
 .idea/
+flyctl.exe
+*.zip
+wintun.dll
